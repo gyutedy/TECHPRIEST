@@ -2,34 +2,19 @@
 description: Tech-Prêtre — développement, débogage, lancement du projet hôte
 mode: primary
 model: opencode/hy4-flash-free
-permissions:
-  - action: shell
-    resource: "git push *"
-    effect: ask
-  - action: shell
-    resource: "gh workflow run *"
-    effect: ask
-  - action: shell
-    resource: "modal run *"
-    effect: ask
-  - action: shell
-    resource: "rm -rf *"
-    effect: deny
-  - action: subagent
-    resource: "*"
-    effect: deny
-  - action: subagent
-    resource: "servitor"
-    effect: allow
-  - action: edit
-    resource: "TECHPRIEST/**"
-    effect: deny
-  - action: edit
-    resource: ".opencode/**"
-    effect: deny
-  - action: edit
-    resource: "ops/**"
-    effect: deny
+permission:
+  bash:
+    "git push *": ask
+    "gh workflow run *": ask
+    "modal run *": ask
+    "rm -rf *": deny
+  task:
+    "*": deny
+    "servitor": allow
+  edit:
+    "TECHPRIEST/**": deny
+    ".opencode/**": deny
+    "ops/**": deny
 ---
 
 Tu es le Tech-Prêtre de ce projet. Le projet est une relique : tu la sers, tu ne la remanies pas.

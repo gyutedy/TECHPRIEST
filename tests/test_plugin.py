@@ -29,18 +29,6 @@ def frontmatter(path):
     return parts[1] if len(parts) > 2 else ""
 
 
-def has_rule(frontmatter_text, action, resource, effect):
-    pattern = (
-        r"action:\s*"
-        + re.escape(action)
-        + r"\s*\n\s*resource:\s*\"?"
-        + re.escape(resource)
-        + r"\"?\s*\n\s*effect:\s*"
-        + re.escape(effect)
-    )
-    return re.search(pattern, frontmatter_text) is not None
-
-
 def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
@@ -68,10 +56,9 @@ class Structure(unittest.TestCase):
         self.assertEqual(config["model"], "opencode/hy4-flash-free")
         self.assertEqual(config["default_agent"], "techpriest")
         self.assertIn("RITES.md", config["instructions"])
-        self.assertIn(
-            {"action": "shell", "resource": "rm -rf *", "effect": "deny"},
-            config["permissions"],
-        )
+        self.assertEqual(config["permission"]["bash"]["rm -rf *"], "deny")
+        for resource in ("git push *", "gh workflow run *", "modal run *"):
+            self.assertEqual(config["permission"]["bash"][resource], "ask")
 
     def test_rites_template_fields(self):
         content = text(TEMPLATE)
@@ -85,11 +72,11 @@ class Agents(unittest.TestCase):
         self.assertIn("mode: primary", meta)
         self.assertIn("model: opencode/hy4-flash-free", meta)
         for resource in ("git push *", "gh workflow run *", "modal run *"):
-            self.assertTrue(has_rule(meta, "shell", resource, "ask"), resource)
-        self.assertTrue(has_rule(meta, "shell", "rm -rf *", "deny"))
+            self.assertIn('"' + resource + '": ask', meta)
+        self.assertIn('"rm -rf *": deny', meta)
         for resource in ("TECHPRIEST/**", ".opencode/**", "ops/**"):
-            self.assertTrue(has_rule(meta, "edit", resource, "deny"), resource)
-        self.assertTrue(has_rule(meta, "subagent", "servitor", "allow"))
+            self.assertIn('"' + resource + '": deny', meta)
+        self.assertIn('"servitor": allow', meta)
 
     def test_techpriest_refuses_without_rites(self):
         body = text(TECHPRIEST).split("---", 2)[2]
@@ -100,8 +87,8 @@ class Agents(unittest.TestCase):
     def test_servitor_is_read_only(self):
         meta = frontmatter(SERVITOR)
         self.assertIn("mode: subagent", meta)
-        self.assertTrue(has_rule(meta, "edit", "*", "deny"))
-        self.assertTrue(has_rule(meta, "shell", "*", "deny"))
+        self.assertIn("edit: deny", meta)
+        self.assertIn("bash: deny", meta)
 
     def test_model_is_a_single_switch(self):
         brain = text(CONFIG) + text(TECHPRIEST)

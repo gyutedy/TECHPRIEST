@@ -3,7 +3,17 @@
   "model": "opencode/hy4-flash-free",
   "default_agent": "techpriest",
   "instructions": ["RITES.md", "AGENTS.md"],
-  "permissions": [
-    { "action": "shell", "resource": "rm -rf *", "effect": "deny" }
-  ]
+  "permission": {
+    "bash": {
+      "git push *": "ask",
+      "gh workflow run *": "ask",
+      "modal run *": "ask",
+      "rm -rf *": "deny"
+    },
+    "edit": {
+      "TECHPRIEST/**": "deny",
+      ".opencode/**": "deny",
+      "ops/**": "deny"
+    }
+  }
 }
