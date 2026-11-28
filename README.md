@@ -76,6 +76,8 @@ Vérification : `cd <projet> && opencode`. L'agent `techpriest` s'ouvre par déf
 | `github-token` | `GITHUB_TOKEN` (scope `repo` + `workflow`) | clonage privé et CLI `gh` |
 | `modal-token` | `MODAL_TOKEN_ID`, `MODAL_TOKEN_SECRET` | la CLI `modal` pour relancer des runs |
 
+Guide pas-à-pas pour obtenir ces valeurs : `GUIDE_SECRETS.md`.
+
 Créer le bot avec `@BotFather` et récupérer son ID avec `@userinfobot`. Les secrets sont injectés par Modal dans l'environnement ; le dépôt ne contient aucune valeur littérale. Le test `Doctrine.test_no_literal_secret_values` vérifie cette règle à chaque exécution de la suite.
 
 ## Session distante
