@@ -1,8 +1,13 @@
 import os
 import subprocess
+import sys
 import time
 
 import modal
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from env_loader import load_env_file, local_secret_values, missing_keys
 
 APP_NAME = "techpriest-ops"
 SESSION_SECONDS = 3600
@@ -11,6 +16,15 @@ STARTUP_GRACE_SECONDS = 180
 BRIDGE_PACKAGE = "@grinev/opencode-telegram-bot@latest"
 
 app = modal.App(APP_NAME)
+
+if modal.is_local():
+    load_env_file()
+    absent = missing_keys()
+    if absent:
+        print("[env_techpriest] cles manquantes : " + ", ".join(absent), file=sys.stderr)
+    runtime_secret = modal.Secret.from_dict(local_secret_values())
+else:
+    runtime_secret = modal.Secret.from_dict({})
 
 image = modal.Image.from_dockerfile(
     path=os.path.dirname(os.path.abspath(__file__)),
@@ -65,11 +79,7 @@ def _stop(process):
     timeout=SESSION_SECONDS,
     idle_timeout=IDLE_SECONDS,
     volumes={"/projects": projects_volume},
-    secrets=[
-        modal.Secret.from_name("telegram-bot"),
-        modal.Secret.from_name("github-token"),
-        modal.Secret.from_name("modal-token"),
-    ],
+    secrets=[runtime_secret],
 )
 def run_session(repo_url: str, worktree: str | None = None):
     if os.environ.get("GITHUB_TOKEN"):

@@ -68,17 +68,19 @@ Interdits :    <ex. ne pas toucher à data/raw/>
 
 Vérification : `cd <projet> && opencode`. L'agent `techpriest` s'ouvre par défaut avec le modèle `opencode/hy4-flash-free` (gratuit pour une durée limitée, politique de non-conservation des données). Pour changer de modèle, modifier une seule ligne : le champ `model` dans `.opencode/agents/techpriest.md` (et, si désiré, `model` dans `.opencode/opencode.jsonc`).
 
-## Secrets — jamais dans le code
+## Secrets — fichier local gitignoré (système PARI)
 
-| Secret Modal | Contenu | Utilisé par |
-| --- | --- | --- |
-| `telegram-bot` | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_ALLOWED_USER_ID` | le pont Telegram dans la sandbox |
-| `github-token` | `GITHUB_TOKEN` (scope `repo` + `workflow`) | clonage privé et CLI `gh` |
-| `modal-token` | `MODAL_TOKEN_ID`, `MODAL_TOKEN_SECRET` | la CLI `modal` pour relancer des runs |
+Écart au CDC §7 : les secrets ne sont plus des Secrets Modal stockés dans un dashboard, mais un fichier plat `env_techpriest` à la racine du dépôt, copié depuis `env_techpriest.example` et gitignoré. C'est le même mécanisme que `env_pari` dans PERTURABO/PARI.
 
-Guide pas-à-pas pour obtenir ces valeurs : `GUIDE_SECRETS.md`.
+| Clé | Utilisée par |
+| --- | --- |
+| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_ALLOWED_USER_ID` | le pont Telegram dans la sandbox |
+| `GITHUB_TOKEN` (scope `repo` + `workflow`) | clonage privé et CLI `gh` |
+| `MODAL_TOKEN_ID`, `MODAL_TOKEN_SECRET` | la CLI `modal` pour relancer des runs |
 
-Créer le bot avec `@BotFather` et récupérer son ID avec `@userinfobot`. Les secrets sont injectés par Modal dans l'environnement ; le dépôt ne contient aucune valeur littérale. Le test `Doctrine.test_no_literal_secret_values` vérifie cette règle à chaque exécution de la suite.
+`ops/env_loader.py` lit le fichier côté hôte au `modal run` et transmet les valeurs à la sandbox via `modal.Secret.from_dict(...)`. Aucune valeur n'entre dans l'image, dans un Volume ou dans git. Guide pas-à-pas : `GUIDE_SECRETS.md`.
+
+Le dépôt étant public, `env_techpriest` ne doit jamais être commité. Les tests `LocalEnv` et `Doctrine.test_no_literal_secret_values` vérifient la règle à chaque exécution.
 
 ## Session distante
 
@@ -98,7 +100,7 @@ Durée : `timeout=3600` s (1 h), `idle_timeout=600` s (10 min d'inactivité). Co
 python -m unittest discover -s tests -v
 ```
 
-Résultat réel de la dernière exécution locale : `Ran 12 tests ... OK`.
+Résultat réel de la dernière exécution locale : `Ran 15 tests ... OK`.
 
 | # | Test | État |
 | --- | --- | --- |

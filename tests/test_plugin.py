@@ -1,10 +1,13 @@
 import hashlib
+import importlib.util
 import json
+import os
 import re
 import shutil
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 CONFIG = ROOT / ".opencode" / "opencode.jsonc"
@@ -113,9 +116,9 @@ class RemoteOps(unittest.TestCase):
         self.assertIn("IDLE_SECONDS = 600", content)
         self.assertIn("timeout=SESSION_SECONDS", content)
         self.assertIn("idle_timeout=IDLE_SECONDS", content)
-        self.assertIn('modal.Secret.from_name("telegram-bot")', content)
-        self.assertIn('modal.Secret.from_name("github-token")', content)
-        self.assertIn('modal.Secret.from_name("modal-token")', content)
+        self.assertIn("modal.Secret.from_dict", content)
+        self.assertIn("load_env_file()", content)
+        self.assertNotIn("modal.Secret.from_name", content)
         self.assertIn("OPENCODE_SERVER_VERSION", content)
         self.assertIn("v2", content)
         self.assertIn("npx", content)
@@ -130,6 +133,53 @@ class RemoteOps(unittest.TestCase):
         self.assertIn(".opencode", text(INSTALL_PS))
         self.assertIn("RITES.md", text(INSTALL_SH))
         self.assertIn(".opencode", text(INSTALL_SH))
+
+
+class LocalEnv(unittest.TestCase):
+    def _loader(self):
+        path = ROOT / "ops" / "env_loader.py"
+        spec = importlib.util.spec_from_file_location("env_loader", path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+
+    def test_template_and_gitignore(self):
+        template = text(ROOT / "env_techpriest.example")
+        for key in (
+            "TELEGRAM_BOT_TOKEN",
+            "TELEGRAM_ALLOWED_USER_ID",
+            "GITHUB_TOKEN",
+            "MODAL_TOKEN_ID",
+            "MODAL_TOKEN_SECRET",
+        ):
+            self.assertIn(key + "=", template)
+            self.assertTrue(template.split(key + "=")[1].splitlines()[0] == "")
+        self.assertIn("env_techpriest", text(ROOT / ".gitignore"))
+
+    def test_loader_rules(self):
+        loader = self._loader()
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "env_techpriest").write_text(
+                "# commentaire\n\nA_TEST_KEY=depuis_fichier\nB_TEST_KEY=\n",
+                encoding="utf-8",
+            )
+            with mock.patch.dict(os.environ, {"A_TEST_KEY": "deja_posee"}, clear=False):
+                self.assertEqual(loader.load_env_file(str(root)), [])
+                self.assertEqual(os.environ["A_TEST_KEY"], "deja_posee")
+            with mock.patch.dict(os.environ, {}, clear=True):
+                self.assertEqual(loader.load_env_file(str(root)), ["A_TEST_KEY"])
+                self.assertEqual(os.environ["A_TEST_KEY"], "depuis_fichier")
+            (root / ".env").write_text("A_TEST_KEY=dotenv\n", encoding="utf-8")
+            with mock.patch.dict(os.environ, {}, clear=True):
+                loader.load_env_file(str(root))
+                self.assertEqual(os.environ["A_TEST_KEY"], "dotenv")
+
+    def test_missing_keys(self):
+        loader = self._loader()
+        with mock.patch.dict(os.environ, {}, clear=True):
+            self.assertEqual(loader.missing_keys(("A_TEST_KEY",)), ["A_TEST_KEY"])
+            self.assertEqual(loader.local_secret_values(("A_TEST_KEY",)), {})
 
 
 class Doctrine(unittest.TestCase):

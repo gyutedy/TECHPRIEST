@@ -1,97 +1,64 @@
-# Guide des secrets — TECHPRIEST
+# Guide des secrets — TECHPRIEST (système PARI)
 
-Trois secrets Modal sont **obligatoires** : le code les déclare avec `modal.Secret.from_name(...)`, donc un secret absent fait échouer le lancement, même si tu n'utilises pas toutes les valeurs.
+TECHPRIEST utilise le même modèle que le monde PARI : un fichier plat local `env_techpriest`, gitignoré, jamais versionné. Aucun secret n'est stocké dans le dashboard Modal ni dans GitHub.
 
-| Secret Modal (nom exact) | Clés qu'il contient | Où les obtenir |
-| --- | --- | --- |
-| `telegram-bot` | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_ALLOWED_USER_ID` | @BotFather et @userinfobot |
-| `github-token` | `GITHUB_TOKEN` | GitHub → Paramètres → Jetons d'accès personnels |
-| `modal-token` | `MODAL_TOKEN_ID`, `MODAL_TOKEN_SECRET` | `modal token new` ou réglages du workspace Modal |
+## Règle de fonctionnement
 
-Les noms de secrets sont sensibles à la casse et doivent être exactement ceux du tableau. Les noms de clés aussi.
+1. Copier `env_techpriest.example` vers `env_techpriest` à la racine du dépôt.
+2. Remplir les valeurs, une par ligne sous la forme `CLE=valeur`. Les lignes vides et celles commençant par `#` sont ignorées.
+3. Le fichier est listé dans `.gitignore` : `git status` ne l'affiche pas et `git push` ne l'envoie pas.
+4. Au `modal run`, `ops/env_loader.py` lit le fichier puis transmet les valeurs à la sandbox avec `modal.Secret.from_dict(...)`. Rien n'est écrit dans l'image, dans un Volume ou dans un fichier du dépôt.
+5. Une variable déjà présente dans l'environnement n'est jamais écrasée (même règle que `load_env_pari()` dans `workflow.py` de PARI). `.env` est lu avant `env_techpriest`.
 
-## Pré-requis
+| Clé | Où l'obtenir |
+| --- | --- |
+| `TELEGRAM_BOT_TOKEN` | @BotFather → `/newbot` |
+| `TELEGRAM_ALLOWED_USER_ID` | @userinfobot (ton ID numérique) |
+| `GITHUB_TOKEN` | GitHub → Settings → Developer settings → Personal access tokens |
+| `MODAL_TOKEN_ID` | `modal token new`, champ `token_id` dans `~/.modal.toml` |
+| `MODAL_TOKEN_SECRET` | `modal token new`, champ `token_secret` dans `~/.modal.toml` |
 
-```
-pip install modal
-modal setup
-```
-
-Cela ouvre le navigateur et écrit tes identifiants dans `~/.modal.toml`. Vérifie avec `modal secret list`.
-
-## 1. Telegram → secret `telegram-bot`
+## 1. Telegram
 
 1. Ouvre `@BotFather` dans Telegram et envoie `/newbot`.
 2. Donne un nom public, puis un nom d'utilisateur se terminant par `bot`.
-3. Copie le token renvoyé. Il ressemble à `<chiffres>:<lettres_et_tirets>`.
-4. Ouvre `@userinfobot`, envoie-lui un message : il te répond avec ton **ID numérique**. C'est ton ID d'utilisateur Telegram, pas l'ID du bot. Cet ID est la whitelist : toute autre personne sera refusée.
-5. Si tu veux utiliser le bot dans un groupe, envoie `/setprivacy` à @BotFather et choisis `Disable` pour ce bot. En chat privé ce n'est pas nécessaire.
-6. Crée le secret :
+3. Copie le token renvoyé dans `env_techpriest` sous `TELEGRAM_BOT_TOKEN=`.
+4. Ouvre `@userinfobot`, envoie-lui un message : il te répond avec ton **ID numérique**. Mets-le dans `TELEGRAM_ALLOWED_USER_ID=`. Cet ID est la whitelist : toute autre personne est refusée.
+5. Pour un groupe, envoie `/setprivacy` à @BotFather et choisis `Disable`. En chat privé, inutile.
 
-```
-modal secret create telegram-bot TELEGRAM_BOT_TOKEN=<colle_le_token_du_bot> TELEGRAM_ALLOWED_USER_ID=<ton_id_numerique>
-```
+Le mot de passe du serveur OpenCode V2 n'est **pas** à mettre dans le fichier : `ops/techpriest_ops.py` le récupère avec `opencode service get password` au démarrage.
 
-Alternative dans le dashboard : Settings → Secrets → New secret, nom `telegram-bot`, puis les deux clés ci-dessus.
-
-Note : le mot de passe du serveur OpenCode V2 n'est **pas** à mettre ici. `ops/techpriest_ops.py` le récupère automatiquement avec `opencode service get password` au démarrage.
-
-## 2. GitHub → secret `github-token`
+## 2. GitHub
 
 Le token sert au clonage des dépôts privés et à `gh workflow run`.
 
-**Jeton classique (le plus simple, conforme au CDC) :**
+1. GitHub → avatar → `Settings` → `Developer settings` → `Personal access tokens` → `Tokens (classic)`.
+2. `Generate new token (classic)`, donne un nom et une expiration, coche `repo` et `workflow`, puis `Generate token`.
+3. Copie la valeur dans `GITHUB_TOKEN=` de `env_techpriest`.
 
-1. GitHub → avatar en haut à droite → `Settings`.
-2. `Developer settings` → `Personal access tokens` → `Tokens (classic)`.
-3. `Generate new token (classic)`, donne un nom, choisis une expiration (90 jours par exemple).
-4. Coche exactement ces scopes : `repo` (dépôts privés) et `workflow` (déclenchement des Actions).
-5. `Generate token`, copie la valeur tout de suite (elle n'est affichée qu'une fois).
+Alternative fine-grained : permissions `Contents: read`, `Actions: write`, `Metadata: read`. Pour un dépôt public sans `gh workflow run`, une valeur factice suffit.
 
-**Alternative fine-grained :** donner à au moins un dépôt les permissions `Contents: read`, `Actions: write` et `Metadata: read`.
+## 3. Modal
 
-6. Crée le secret :
+1. Sur ta machine : `pip install modal` puis `modal token new`, et valide dans le navigateur.
+2. Lis `~/.modal.toml` avec `Get-Content "$env:USERPROFILE\.modal.toml"`.
+3. Copie `token_id` dans `MODAL_TOKEN_ID=` et `token_secret` dans `MODAL_TOKEN_SECRET=`.
 
-```
-modal secret create github-token GITHUB_TOKEN=<colle_le_pat>
-```
-
-Si tu n'utilises que des dépôts publics et aucun `gh workflow run`, ce secret peut contenir une valeur factice, mais il doit exister.
-
-## 3. Modal → secret `modal-token`
-
-Ce secret permet à la CLI `modal` **dans la sandbox** de relancer des runs (`modal run`) à la demande de l'agent.
-
-1. Sur ta machine, lance `modal token new` et valide dans le navigateur.
-2. Lis `~/.modal.toml` :
-
-```
-Get-Content "$env:USERPROFILE\.modal.toml"
-```
-
-Tu y trouves `token_id = "ak-..."` et `token_secret = "as-..."`. Ce sont respectivement `MODAL_TOKEN_ID` et `MODAL_TOKEN_SECRET`.
-
-3. Crée le secret :
-
-```
-modal secret create modal-token MODAL_TOKEN_ID=<ak-...> MODAL_TOKEN_SECRET=<as-...>
-```
-
-Alternative : dashboard Modal → Settings → Tokens → créer un token, ou `Service Users` pour un workspace partagé. La valeur du secret n'est montrée qu'une fois à la création.
+Ces valeurs permettent à la CLI `modal` dans la sandbox de relancer des runs à la demande.
 
 ## Vérification
 
 ```
-modal secret list
 python -m unittest discover -s tests -v
 modal run ops/techpriest_ops.py::run_session --repo-url <url-du-projet>
 ```
 
-`modal secret list` doit afficher exactement `telegram-bot`, `github-token` et `modal-token`. La suite de tests vérifie qu'aucune valeur littérale n'a été collée dans le code.
+Si une clé manque, le lancement affiche `[env_techpriest] cles manquantes : ...` avec les noms seulement, jamais les valeurs.
 
 ## Règles d'or
 
-- Ne jamais mettre ces valeurs dans un fichier du dépôt, un prompt ou un log.
-- Remplacer un token compromis immédiatement : BotFather `/revoke` pour Telegram, suppression du PAT pour GitHub, rotation du token Modal.
-- Le token GitHub collé dans le chat lors de la création du dépôt doit être révoqué : il a servi une seule fois à créer le repo et à pousser le commit initial.
+- Ne jamais committer `env_techpriest`, ni coller ses valeurs dans un prompt, un log ou un fichier du dépôt.
+- Le dépôt étant public, un fichier d'environnement versionné exposerait immédiatement les clés.
+- Ces clés sont temporaires : révoque-les après usage (BotFather `/revoke`, suppression du PAT GitHub, rotation du token Modal).
+- Le token GitHub collé dans le chat lors de la création du dépôt doit être révoqué : il a servi une seule fois au repo et au commit initial.
 - La whitelist Telegram (`TELEGRAM_ALLOWED_USER_ID`) est la première ligne de défense ; ne la désactive pas.
