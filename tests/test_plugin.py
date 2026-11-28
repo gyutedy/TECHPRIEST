@@ -115,7 +115,7 @@ class RemoteOps(unittest.TestCase):
         self.assertIn("SESSION_SECONDS = 3600", content)
         self.assertIn("IDLE_SECONDS = 600", content)
         self.assertIn("timeout=SESSION_SECONDS", content)
-        self.assertIn("idle_timeout=IDLE_SECONDS", content)
+        self.assertIn("scaledown_window=IDLE_SECONDS", content)
         self.assertIn("modal.Secret.from_dict", content)
         self.assertIn("load_env_file()", content)
         self.assertNotIn("modal.Secret.from_name", content)

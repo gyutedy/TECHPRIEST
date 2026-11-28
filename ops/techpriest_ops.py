@@ -27,8 +27,7 @@ else:
     runtime_secret = modal.Secret.from_dict({})
 
 image = modal.Image.from_dockerfile(
-    path=os.path.dirname(os.path.abspath(__file__)),
-    dockerfile="image.Dockerfile",
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "image.Dockerfile")
 )
 
 projects_volume = modal.Volume.from_name("techpriest-projects", create_if_missing=True)
@@ -75,9 +74,9 @@ def _stop(process):
 @app.function(
     image=image,
     cpu=1,
-    memory_mib=2048,
+    memory=2048,
     timeout=SESSION_SECONDS,
-    idle_timeout=IDLE_SECONDS,
+    scaledown_window=IDLE_SECONDS,
     volumes={"/projects": projects_volume},
     secrets=[runtime_secret],
 )

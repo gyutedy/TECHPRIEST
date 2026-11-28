@@ -92,7 +92,7 @@ modal run ops/techpriest_ops.py::run_session --repo-url <url-du-projet>
 
 La sandbox construit l'image (binaire OpenCode, Node 22, `gh`, CLI `modal`), clone le dépôt, lance `opencode serve --service`, récupère le mot de passe serveur via `opencode service get password`, puis démarre le pont `@grinev/opencode-telegram-bot`. Aucun port entrant : le bot parle au serveur local et à Telegram en polling sortant. La whitelist Telegram refuse tout utilisateur non autorisé.
 
-Durée : `timeout=3600` s (1 h), `idle_timeout=600` s (10 min d'inactivité). Coût déduit : environ 0,19 $/session en configuration minimale, 0,38 $ en configuration confort — dans les 30 $/mois du plan Modal Starter.
+Durée : `timeout=3600` s (1 h), `scaledown_window=600` s (10 min d'inactivité ; `idle_timeout` a été remplacé par ce paramètre dans Modal 1.6). Coût déduit : environ 0,19 $/session en configuration minimale, 0,38 $ en configuration confort — dans les 30 $/mois du plan Modal Starter.
 
 ## Tests
 
