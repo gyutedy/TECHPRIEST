@@ -26,9 +26,19 @@ if modal.is_local():
 else:
     runtime_secret = modal.Secret.from_dict({})
 
-image = modal.Image.from_dockerfile(
-    os.path.join(os.path.dirname(os.path.abspath(__file__)), "image.Dockerfile"),
-    add_python="3.12",
+OPS_DIR = os.path.dirname(os.path.abspath(__file__))
+
+image = (
+    modal.Image.from_dockerfile(
+        os.path.join(OPS_DIR, "image.Dockerfile"),
+        add_python="3.12",
+    )
+    .add_local_file(
+        os.path.join(OPS_DIR, "env_loader.py"),
+        "/opt/techpriest/env_loader.py",
+        copy=True,
+    )
+    .env({"PYTHONPATH": "/opt/techpriest"})
 )
 
 projects_volume = modal.Volume.from_name("techpriest-projects", create_if_missing=True)
