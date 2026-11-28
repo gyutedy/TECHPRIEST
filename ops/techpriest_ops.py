@@ -1,4 +1,5 @@
 import os
+import socket
 import subprocess
 import sys
 import time
@@ -56,20 +57,15 @@ def _configure_git_credentials():
     )
 
 
-def _wait_for_service(timeout_seconds):
+def _wait_for_port(port, timeout_seconds):
     deadline = time.monotonic() + timeout_seconds
-    last_error = ""
     while time.monotonic() < deadline:
-        result = subprocess.run(
-            ["opencode", "service", "get", "password"],
-            capture_output=True,
-            text=True,
-        )
-        if result.returncode == 0 and result.stdout.strip():
-            return result.stdout.strip()
-        last_error = result.stderr.strip() or result.stdout.strip()
-        time.sleep(2)
-    raise RuntimeError("opencode service not ready: " + last_error)
+        try:
+            with socket.create_connection(("127.0.0.1", port), timeout=2):
+                return
+        except OSError:
+            time.sleep(2)
+    raise RuntimeError("opencode server not listening on port " + str(port))
 
 
 def _stop(process):
@@ -106,15 +102,15 @@ def run_session(repo_url: str, worktree: str | None = None):
         work = linked
     os.chdir(work)
 
-    os.environ["OPENCODE_SERVER_VERSION"] = "v2"
-    os.environ["OPENCODE_SERVER_MODE"] = "service"
+    os.environ["OPENCODE_SERVER_VERSION"] = "v1"
+    os.environ["OPENCODE_API_URL"] = "http://127.0.0.1:4096"
     os.environ.setdefault("OPENCODE_MODEL_PROVIDER", "opencode")
     os.environ.setdefault("OPENCODE_MODEL_ID", "hy4-flash-free")
     os.environ.setdefault("BOT_LOCALE", "fr")
 
-    server = subprocess.Popen(["opencode", "serve", "--service"])
+    server = subprocess.Popen(["opencode", "serve", "--port", "4096", "--hostname", "127.0.0.1"])
     try:
-        os.environ["OPENCODE_SERVER_PASSWORD"] = _wait_for_service(STARTUP_GRACE_SECONDS)
+        _wait_for_port(4096, STARTUP_GRACE_SECONDS)
         bot = subprocess.Popen(["npx", "-y", BRIDGE_PACKAGE])
         try:
             deadline = time.monotonic() + SESSION_SECONDS - 20

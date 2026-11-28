@@ -90,7 +90,7 @@ modal setup
 modal run ops/techpriest_ops.py::run_session --repo-url <url-du-projet>
 ```
 
-La sandbox construit l'image (binaire OpenCode, Node 22, `gh`, CLI `modal`), clone le dépôt, lance `opencode serve --service`, récupère le mot de passe serveur via `opencode service get password`, puis démarre le pont `@grinev/opencode-telegram-bot`. Aucun port entrant : le bot parle au serveur local et à Telegram en polling sortant. La whitelist Telegram refuse tout utilisateur non autorisé.
+La sandbox construit l'image (binaire OpenCode, Node 22, `gh`, CLI `modal`), clone le dépôt, lance `opencode serve --port 4096` (mode V1 : le binaire installé n'expose pas le mode service V2), puis démarre le pont `@grinev/opencode-telegram-bot` avec `OPENCODE_SERVER_VERSION=v1`. Aucun port entrant : le bot parle au serveur local et à Telegram en polling sortant. La whitelist Telegram refuse tout utilisateur non autorisé.
 
 Durée : `timeout=3600` s (1 h), `scaledown_window=600` s (10 min d'inactivité ; `idle_timeout` a été remplacé par ce paramètre dans Modal 1.6). Coût déduit : environ 0,19 $/session en configuration minimale, 0,38 $ en configuration confort — dans les 30 $/mois du plan Modal Starter.
 
@@ -118,7 +118,7 @@ Résultat réel de la dernière exécution locale : `Ran 15 tests ... OK`.
 ## Limites connues
 
 - Le modèle gratuit peut être retiré à tout moment : une ligne à changer, ne pas laisser l'agent muet.
-- Le mot de passe du serveur V2 est requis par le pont ; il est relu automatiquement au démarrage.
+- Le pont Telegram est configuré en mode V1 (`OPENCODE_SERVER_VERSION=v1`) ; le binaire OpenCode de l'image n'expose pas le mode service V2.
 - Le cold-start Modal cible moins de 3 minutes ; ce seuil reste à mesurer en conditions réelles.
 - GitHub Actions (déclencheurs PR/dispatch) reste optionnel et hors de ce greffon.
 

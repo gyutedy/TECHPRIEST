@@ -119,8 +119,8 @@ class RemoteOps(unittest.TestCase):
         self.assertIn("modal.Secret.from_dict", content)
         self.assertIn("load_env_file()", content)
         self.assertNotIn("modal.Secret.from_name", content)
-        self.assertIn("OPENCODE_SERVER_VERSION", content)
-        self.assertIn("v2", content)
+        self.assertIn('os.environ["OPENCODE_SERVER_VERSION"] = "v1"', content)
+        self.assertIn('"--port", "4096"', content)
         self.assertIn("npx", content)
 
     def test_image_contains_toolchain(self):

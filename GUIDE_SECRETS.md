@@ -26,7 +26,7 @@ TECHPRIEST utilise le même modèle que le monde PARI : un fichier plat local `e
 4. Ouvre `@userinfobot`, envoie-lui un message : il te répond avec ton **ID numérique**. Mets-le dans `TELEGRAM_ALLOWED_USER_ID=`. Cet ID est la whitelist : toute autre personne est refusée.
 5. Pour un groupe, envoie `/setprivacy` à @BotFather et choisis `Disable`. En chat privé, inutile.
 
-Le mot de passe du serveur OpenCode V2 n'est **pas** à mettre dans le fichier : `ops/techpriest_ops.py` le récupère avec `opencode service get password` au démarrage.
+Aucun mot de passe serveur n'est à mettre dans le fichier : le pont tourne en mode V1 (`opencode serve --port 4096`), où le mot de passe est optionnel.
 
 ## 2. GitHub
 
